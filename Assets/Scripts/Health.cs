@@ -1,53 +1,82 @@
 using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using System.Collections;
+using UnityEngine.UI;           // Для работы с полоской здоровья (Slider)
+using UnityEngine.SceneManagement; // Для перезагрузки сцены
+using System.Collections;       // Для работы задержек (Coroutines)
 
 public class Health : MonoBehaviour
 {
+    [Header("Параметры здоровья")]
     public float maxHealth = 100f;
     public float currentHealth;
-    public bool isPlayer = false;
-    public Slider healthSlider;
-    public Animator anim;
-    public PlayerMovement movement; // Ссылка на движение (чтобы остановить труп)
+    public bool isPlayer = false;   // Поставь галочку, если этот скрипт на Игроке
 
-    public float hitStunTime = 0.3f;
-    public float deathDelay = 3.0f; // Сколько секунд ждем перед респауном
+    [Header("Ссылки на UI и Анимации")]
+    public Slider healthSlider;     // Перетащи сюда слайдер из Canvas
+    public Animator anim;           // Перетащи сюда модель с аниматором
+    public PlayerMovement movement; // Ссылка на скрипт движения (только для игрока)
 
-    private bool isDead = false; // Чтобы не умирать дважды
+    [Header("Настройки таймингов")]
+    public float hitStunTime = 0.4f; // Сколько секунд нельзя ходить при ударе
+    public float deathDelay = 3.0f;  // Сколько ждать перед респауном игрока
+
+    private bool isDead = false;    // Флаг, чтобы не умирать дважды
 
     void Start()
     {
         currentHealth = maxHealth;
-        if (healthSlider != null) { healthSlider.maxValue = maxHealth; healthSlider.value = currentHealth; }
+
+        // Настройка слайдера при старте
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = maxHealth;
+            healthSlider.value = currentHealth;
+        }
     }
 
+    // МЕТОД ПОЛУЧЕНИЯ УРОНА (вызывается из PlayerCombat или EnemyAI)
     public void TakeDamage(float amount, DamageType type)
     {
-        if (isDead) return; // Мертвые урон не получают
+        if (isDead) return; // Если уже мертв — ничего не делаем
 
         currentHealth -= amount;
-        if (healthSlider != null) healthSlider.value = currentHealth;
 
+        // Обновляем полоску визуально
+        if (healthSlider != null)
+            healthSlider.value = currentHealth;
+
+        Debug.Log(gameObject.name + " получил " + amount + " " + type + " урона.");
+
+        // Проверяем на смерть
         if (currentHealth <= 0)
         {
             Die();
         }
-        else if (isPlayer)
+        else
         {
-            StartCoroutine(HitStun());
+            // Если выжил — запускаем "реакцию на удар" (Hit Stun)
+            StartCoroutine(HitStunRoutine());
         }
     }
 
-    IEnumerator HitStun()
+    // КОРУТИНА: Микро-стан при получении урона
+    IEnumerator HitStunRoutine()
     {
-        if (anim != null) anim.SetTrigger("Hit");
-        if (movement != null) movement.canMove = false;
-        yield return new WaitForSeconds(hitStunTime);
-        if (movement != null) movement.canMove = true;
+        if (anim != null) anim.SetTrigger("Hit"); // Запуск анимации вздрагивания
+
+        // Если это игрок — запрещаем ему ходить на время стана
+        if (isPlayer && movement != null)
+        {
+            movement.canMove = false;
+            yield return new WaitForSeconds(hitStunTime);
+            movement.canMove = true;
+        }
+        else
+        {
+            yield return null;
+        }
     }
 
+    // МЕТОД СМЕРТИ
     void Die()
     {
         isDead = true;
@@ -58,26 +87,46 @@ public class Health : MonoBehaviour
         }
         else
         {
-            // Для моба можно просто запустить анимацию и удалить через 2 сек
-            if (anim != null) anim.SetTrigger("Death");
-            Destroy(gameObject, 2.0f);
+            EnemyDeath();
         }
     }
 
+    // ЛОГИКА СМЕРТИ ИГРОКА
     IEnumerator PlayerDeathRoutine()
     {
-        Debug.Log("Игрок погиб...");
+        Debug.Log("Игрок падает...");
 
-        if (anim != null) anim.SetTrigger("Death"); // 1. Запускаем анимацию падения
-        if (movement != null) movement.canMove = false; // 2. Выключаем управление
+        if (anim != null) anim.SetTrigger("Death");
+        if (movement != null) movement.canMove = false;
 
-        // 3. Выключаем физику (чтобы мобы не толкали труп)
-        if (GetComponent<CharacterController>() != null)
-            GetComponent<CharacterController>().enabled = false;
+        // Выключаем коллайдер, чтобы мобы не толкали труп
+        CharacterController cc = GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
 
-        yield return new WaitForSeconds(deathDelay); // 4. Ждем (например, 3 секунды)
+        // Ждем, пока доиграется анимация падения (например, 3 секунды)
+        yield return new WaitForSeconds(deathDelay);
 
-        // 5. ПЕРЕЗАГРУЗКА
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        // Находим GameManager на сцене и просим его показать UI
+        GameManager gm = Object.FindFirstObjectByType<GameManager>();
+        if (gm != null)
+        {
+            gm.ShowGameOverScreen();
+        }
+    }
+
+    // ЛОГИКА СМЕРТИ МОБА
+    void EnemyDeath()
+    {
+        if (anim != null) anim.SetTrigger("Death");
+
+        // Выключаем его ИИ и навигацию, чтобы он не ходил мертвым
+        UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = false;
+
+        MonoBehaviour aiScript = GetComponent<EnemyAI>(); // Предположим, скрипт ИИ так называется
+        if (aiScript != null) aiScript.enabled = false;
+
+        // Удаляем объект моба со сцены через 3 секунды (чтобы анимация успела проиграться)
+        Destroy(gameObject, 3.0f);
     }
 }

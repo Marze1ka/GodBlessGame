@@ -71,7 +71,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 9452ae1262a74094f8a68013fbcd1834, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -218,6 +218,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -6722085885383957590, guid: 0b987640d9457a4439b8ae3b7af2bace, type: 3}
+      propertyPath: m_Intensity
+      value: 640.93
+      objectReference: {fileID: 0}
     - target: {fileID: -4096120871940991593, guid: 0b987640d9457a4439b8ae3b7af2bace, type: 3}
       propertyPath: m_LocalPosition.y
       value: 4.26
@@ -226,6 +230,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Boule de feu en Low Poly_Scene
       objectReference: {fileID: 0}
+    - target: {fileID: 6317578925029434746, guid: 0b987640d9457a4439b8ae3b7af2bace, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 53bca40ed29ebef4695e905294a36649, type: 2}
     - target: {fileID: 8632055958874330854, guid: 0b987640d9457a4439b8ae3b7af2bace, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.27
