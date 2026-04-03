@@ -1,31 +1,31 @@
 using UnityEngine;
-using UnityEngine.UI;           // Для работы с полоской здоровья (Slider)
-using UnityEngine.SceneManagement; // Для перезагрузки сцены
-using System.Collections;       // Для работы задержек (Coroutines)
+using UnityEngine.UI;          
+using UnityEngine.SceneManagement;
+using System.Collections;       
 
 public class Health : MonoBehaviour
 {
     [Header("Параметры здоровья")]
     public float maxHealth = 100f;
     public float currentHealth;
-    public bool isPlayer = false;   // Поставь галочку, если этот скрипт на Игроке
+    public bool isPlayer = false; 
 
     [Header("Ссылки на UI и Анимации")]
-    public Slider healthSlider;     // Перетащи сюда слайдер из Canvas
-    public Animator anim;           // Перетащи сюда модель с аниматором
-    public PlayerMovement movement; // Ссылка на скрипт движения (только для игрока)
+    public Slider healthSlider; 
+    public Animator anim;         
+    public PlayerMovement movement; 
 
     [Header("Настройки таймингов")]
-    public float hitStunTime = 0.4f; // Сколько секунд нельзя ходить при ударе
-    public float deathDelay = 3.0f;  // Сколько ждать перед респауном игрока
+    public float hitStunTime = 0.4f; 
+    public float deathDelay = 3.0f;  
 
-    private bool isDead = false;    // Флаг, чтобы не умирать дважды
+    private bool isDead = false;    
 
     void Start()
     {
         currentHealth = maxHealth;
 
-        // Настройка слайдера при старте
+
         if (healthSlider != null)
         {
             healthSlider.maxValue = maxHealth;
@@ -33,37 +33,32 @@ public class Health : MonoBehaviour
         }
     }
 
-    // МЕТОД ПОЛУЧЕНИЯ УРОНА (вызывается из PlayerCombat или EnemyAI)
+  
     public void TakeDamage(float amount, DamageType type)
     {
-        if (isDead) return; // Если уже мертв — ничего не делаем
+        if (isDead) return;
 
         currentHealth -= amount;
 
-        // Обновляем полоску визуально
         if (healthSlider != null)
             healthSlider.value = currentHealth;
 
         Debug.Log(gameObject.name + " получил " + amount + " " + type + " урона.");
 
-        // Проверяем на смерть
         if (currentHealth <= 0)
         {
             Die();
         }
         else
         {
-            // Если выжил — запускаем "реакцию на удар" (Hit Stun)
             StartCoroutine(HitStunRoutine());
         }
     }
 
-    // КОРУТИНА: Микро-стан при получении урона
     IEnumerator HitStunRoutine()
     {
-        if (anim != null) anim.SetTrigger("Hit"); // Запуск анимации вздрагивания
+        if (anim != null) anim.SetTrigger("Hit"); 
 
-        // Если это игрок — запрещаем ему ходить на время стана
         if (isPlayer && movement != null)
         {
             movement.canMove = false;
@@ -76,7 +71,6 @@ public class Health : MonoBehaviour
         }
     }
 
-    // МЕТОД СМЕРТИ
     void Die()
     {
         isDead = true;
@@ -91,7 +85,6 @@ public class Health : MonoBehaviour
         }
     }
 
-    // ЛОГИКА СМЕРТИ ИГРОКА
     IEnumerator PlayerDeathRoutine()
     {
         Debug.Log("Игрок падает...");
@@ -99,14 +92,10 @@ public class Health : MonoBehaviour
         if (anim != null) anim.SetTrigger("Death");
         if (movement != null) movement.canMove = false;
 
-        // Выключаем коллайдер, чтобы мобы не толкали труп
         CharacterController cc = GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
-
-        // Ждем, пока доиграется анимация падения (например, 3 секунды)
         yield return new WaitForSeconds(deathDelay);
 
-        // Находим GameManager на сцене и просим его показать UI
         GameManager gm = Object.FindFirstObjectByType<GameManager>();
         if (gm != null)
         {
@@ -114,19 +103,15 @@ public class Health : MonoBehaviour
         }
     }
 
-    // ЛОГИКА СМЕРТИ МОБА
     void EnemyDeath()
     {
         if (anim != null) anim.SetTrigger("Death");
-
-        // Выключаем его ИИ и навигацию, чтобы он не ходил мертвым
         UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent != null) agent.enabled = false;
 
-        MonoBehaviour aiScript = GetComponent<EnemyAI>(); // Предположим, скрипт ИИ так называется
+        MonoBehaviour aiScript = GetComponent<EnemyAI>(); 
         if (aiScript != null) aiScript.enabled = false;
 
-        // Удаляем объект моба со сцены через 3 секунды (чтобы анимация успела проиграться)
         Destroy(gameObject, 3.0f);
     }
 }

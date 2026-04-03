@@ -8,7 +8,7 @@ public class Projectile : MonoBehaviour
 
     void Start()
     {
-        Destroy(gameObject, lifeTime); // Удалить через 3 сек, если никуда не попал
+        Destroy(gameObject, lifeTime); 
     }
 
     void Update()
@@ -19,10 +19,10 @@ public class Projectile : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Health health = other.GetComponent<Health>();
-        if (health != null && !health.isPlayer) // Не раним самого себя
+        if (health != null && !health.isPlayer) 
         {
             health.TakeDamage(damage, DamageType.Magical);
-            Destroy(gameObject); // Исчезаем при попадании
+            Destroy(gameObject);
         }
     }
 }

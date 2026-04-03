@@ -13,8 +13,7 @@ public class EnemyProjectile : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Health targetHealth = other.GetComponent<Health>();
-
-        // Магия моба должна бить ТОЛЬКО игрока
+ 
         if (targetHealth != null && targetHealth.isPlayer)
         {
             targetHealth.TakeDamage(damage, DamageType.Magical);

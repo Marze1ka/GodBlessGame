@@ -5,7 +5,7 @@ public class EnemyAI : MonoBehaviour
 {
     public NavMeshAgent agent;
     public Transform player;
-    public Animator anim; // Ссылка на аниматор
+    public Animator anim; 
 
     [Header("Настройки")]
     public float detectionRange = 10f;
@@ -18,8 +18,6 @@ public class EnemyAI : MonoBehaviour
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        // 1. ПЕРЕДАЕМ СКОРОСТЬ В АНИМАТОР
-        // agent.velocity.magnitude — это реальная скорость движения моба
         if (anim != null)
         {
             anim.SetFloat("Speed", agent.velocity.magnitude);
@@ -42,14 +40,12 @@ public class EnemyAI : MonoBehaviour
 
     void AttackPlayer()
     {
-        agent.SetDestination(transform.position); // Остановиться
+        agent.SetDestination(transform.position); 
 
         if (Time.time >= lastAttackTime + attackCooldown)
-        {
-            // 2. ЗАПУСКАЕМ АНИМАЦИЮ АТАКИ
+        {   
             if (anim != null) anim.SetTrigger("Attack");
 
-            // Наносим урон (можно с задержкой через Invoke, если анимация длинная)
             Invoke("DealDamage", 0.5f);
 
             lastAttackTime = Time.time;
@@ -58,7 +54,6 @@ public class EnemyAI : MonoBehaviour
 
     void DealDamage()
     {
-        // Проверяем еще раз дистанцию перед нанесением урона
         if (Vector3.Distance(transform.position, player.position) <= attackRange + 0.5f)
         {
             Health playerHealth = player.GetComponent<Health>();

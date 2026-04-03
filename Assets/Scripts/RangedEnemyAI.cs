@@ -8,20 +8,19 @@ public class RangedEnemyAI : MonoBehaviour
     public Animator anim;
 
     [Header("Дистанции")]
-    public float detectionRange = 15f; // Когда заметит
-    public float stopDistance = 8f;    // На каком расстоянии остановится, чтобы стрелять
-    public float attackRange = 10f;   // Дальность полета магии
+    public float detectionRange = 15f; 
+    public float stopDistance = 8f;    
+    public float attackRange = 10f;   
 
     [Header("Атака")]
     public GameObject projectilePrefab;
-    public Transform firePoint; // Точка в руке
+    public Transform firePoint; 
     public float attackCooldown = 3f;
     float lastAttackTime;
-    public float spawnDelay = 1f; // Через сколько секунд после начала анимации вылетит шар
+    public float spawnDelay = 1f; 
     void Start()
     {
         if (player == null) player = GameObject.FindGameObjectWithTag("Player").transform;
-        // Устанавливаем дистанцию остановки в NavMesh
         agent.stoppingDistance = stopDistance;
     }
 
@@ -29,21 +28,18 @@ public class RangedEnemyAI : MonoBehaviour
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        // Передаем скорость в аниматор
         if (anim != null) anim.SetFloat("Speed", agent.velocity.magnitude);
 
         if (distanceToPlayer <= detectionRange)
         {
             if (distanceToPlayer > stopDistance)
             {
-                // Идем к игроку
                 agent.SetDestination(player.position);
             }
             else
             {
-                // Мы на месте — стоим и атакуем
                 agent.ResetPath();
-                FacePlayer(); // Поворачиваемся лицом к игроку
+                FacePlayer();
 
                 if (Time.time >= lastAttackTime + attackCooldown)
                 {
@@ -65,7 +61,6 @@ public class RangedEnemyAI : MonoBehaviour
         lastAttackTime = Time.time;
         if (anim != null) anim.SetTrigger("Cast");
 
-        // Теперь мы используем переменную вместо жесткого числа 0.5
         Invoke("SpawnProjectile", spawnDelay);
     }
 
@@ -73,7 +68,6 @@ public class RangedEnemyAI : MonoBehaviour
     {
         if (projectilePrefab != null && firePoint != null)
         {
-            // Создаем снаряд и направляем его в сторону игрока
             Instantiate(projectilePrefab, firePoint.position, transform.rotation);
         }
     }

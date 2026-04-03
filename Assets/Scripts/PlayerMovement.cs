@@ -11,12 +11,10 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 velocity;
 
-    // ПЕРЕМЕННАЯ-ЗАМОК
     [HideInInspector] public bool canMove = true;
 
     void Update()
     {
-        // Если ходить нельзя — обнуляем скорость в аниматоре и выходим
         if (!canMove)
         {
             anim.SetFloat("Speed", 0, 0.1f, Time.deltaTime);

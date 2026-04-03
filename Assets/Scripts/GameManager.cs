@@ -1,27 +1,23 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // Для перезагрузки
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject gameOverUI; // Ссылка на панель смерти
+    public GameObject gameOverUI; 
 
-    // Метод для показа окна (вызовем из Health.cs)
     public void ShowGameOverScreen()
     {
-        gameOverUI.SetActive(true); // Включаем панель
+        gameOverUI.SetActive(true); 
 
-        // Разблокируем курсор мыши, чтобы можно было нажать кнопку
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Останавливаем время в игре (мобы перестанут бегать)
         Time.timeScale = 0f;
     }
 
-    // Метод для кнопки рестарта
     public void RestartGame()
     {
-        Time.timeScale = 1f; // Возвращаем время в норму
+        Time.timeScale = 1f; 
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }
