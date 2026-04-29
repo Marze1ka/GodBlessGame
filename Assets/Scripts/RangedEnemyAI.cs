@@ -26,6 +26,9 @@ public class RangedEnemyAI : MonoBehaviour
 
     void Update()
     {
+        if (agent == null || !agent.isOnNavMesh || !agent.enabled)
+            return;
+
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         if (anim != null) anim.SetFloat("Speed", agent.velocity.magnitude);
@@ -37,8 +40,10 @@ public class RangedEnemyAI : MonoBehaviour
                 agent.SetDestination(player.position);
             }
             else
-            {
-                agent.ResetPath();
+            {            
+                if (agent.isOnNavMesh && agent.enabled)
+                    agent.ResetPath();
+
                 FacePlayer();
 
                 if (Time.time >= lastAttackTime + attackCooldown)

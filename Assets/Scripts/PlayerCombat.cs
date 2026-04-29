@@ -13,7 +13,7 @@ public class PlayerCombat : MonoBehaviour
     public float magicDamage = 15f;    
     public float attackRadius = 1.5f;  
 
-    [Header("Точки атаки (Сюда тянуть объекты)")]
+    [Header("Точки атаки")]
     public Transform swordPoint;       
     public Transform firePoint;        
     public GameObject magicProjectilePrefab; 
@@ -24,7 +24,7 @@ public class PlayerCombat : MonoBehaviour
     private float magicTimer;          
     private bool isMagicReady = true;  
 
-    [Header("Тайминги анимаций (Lock)")]
+    [Header("Тайминги анимаций")]
     public float attackLockTime = 0.8f; 
     public float magicLockTime = 1.2f;  
 
@@ -47,7 +47,7 @@ public class PlayerCombat : MonoBehaviour
             magicTimer += Time.deltaTime;
 
             if (magicSlider != null)
-                magicSlider.value = magicTimer; 
+                magicSlider.value = magicTimer;
 
             if (magicTimer >= magicCooldown)
             {

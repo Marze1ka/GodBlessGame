@@ -43,7 +43,7 @@ public class Health : MonoBehaviour
         if (healthSlider != null)
             healthSlider.value = currentHealth;
 
-        Debug.Log(gameObject.name + " получил " + amount + " " + type + " урона.");
+        Debug.Log(gameObject.name + " получил " + amount + " " + type + " урона");
 
         if (currentHealth <= 0)
         {
@@ -87,7 +87,7 @@ public class Health : MonoBehaviour
 
     IEnumerator PlayerDeathRoutine()
     {
-        Debug.Log("Игрок падает...");
+        Debug.Log("Игрок падает");
 
         if (anim != null) anim.SetTrigger("Death");
         if (movement != null) movement.canMove = false;
