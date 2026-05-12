@@ -21,7 +21,7 @@ public class PlayerCombat : MonoBehaviour
     [Header("Магия и Кулдаун")]
     public Slider magicSlider;         
     public float magicCooldown = 3f;   
-    private float magicTimer;          
+    public float magicTimer;          
     private bool isMagicReady = true;  
 
     [Header("Тайминги анимаций")]

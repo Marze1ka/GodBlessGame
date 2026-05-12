@@ -87,20 +87,20 @@ public class Health : MonoBehaviour
 
     IEnumerator PlayerDeathRoutine()
     {
-        Debug.Log("Игрок падает");
-
         if (anim != null) anim.SetTrigger("Death");
         if (movement != null) movement.canMove = false;
 
+        // ИСПРАВЛЕНО: Проверяем, есть ли компонент, прежде чем отключать
         CharacterController cc = GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
+        if (cc != null)
+        {
+            cc.enabled = false;
+        }
+
         yield return new WaitForSeconds(deathDelay);
 
-        GameManager gm = Object.FindFirstObjectByType<GameManager>();
-        if (gm != null)
-        {
-            gm.ShowGameOverScreen();
-        }
+        GameManager gm = Object.FindAnyObjectByType<GameManager>();
+        if (gm != null) gm.ShowGameOverScreen();
     }
 
     void EnemyDeath()
