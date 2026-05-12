@@ -2,12 +2,26 @@ using UnityEngine;
 
 public class LevelBootstrapper : MonoBehaviour
 {
-    private void Start()
-    {
-        // Здесь можно автоматически настроить камеру или спавн игрока
-        Debug.Log("Сцена игры: Объекты настроены.");
+    public PlayerView playerView;
+    public PlayerController playerController;
 
-        // Скрываем мышку при старте уровня
+    private void Start() // Используем Start, чтобы все объекты успели появиться
+    {
+        if (playerView == null || playerController == null)
+        {
+            Debug.LogError("LEVEL BOOTSTRAPPER: Ссылки на View или Controller не установлены в инспекторе!");
+            return;
+        }
+
+        // 1. Создаем Модель (данные)
+        PlayerModel playerModel = new PlayerModel();
+
+        // 2. Запускаем Контроллер
+        playerController.Initialize(playerModel, playerView);
+
+        Debug.Log("<color=yellow>LEVEL BOOTSTRAPPER: Игрок успешно инициализирован!</color>");
+
+        // Скрываем курсор при старте
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }

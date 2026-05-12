@@ -11190,7 +11190,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58a037543377a3543ba780d4ba3fa312, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  gameOverUI: {fileID: 868413420}
+  gameOverPanel: {fileID: 868413420}
 --- !u!4 &877251774
 Transform:
   m_ObjectHideFlags: 0
@@ -18996,6 +18996,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: faf54a9fe22295e418181a17cb9d9db5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelBootstrapper
+  playerView: {fileID: 1460620447}
+  playerController: {fileID: 1460620446}
 --- !u!4 &1397383410
 Transform:
   m_ObjectHideFlags: 0
@@ -19370,9 +19372,8 @@ GameObject:
   - component: {fileID: 1460620443}
   - component: {fileID: 1460620442}
   - component: {fileID: 1460620441}
-  - component: {fileID: 1460620440}
-  - component: {fileID: 1460620439}
-  - component: {fileID: 1460620438}
+  - component: {fileID: 1460620447}
+  - component: {fileID: 1460620446}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -19380,69 +19381,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1460620438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1460620437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bb12cb6b7e6a3d64ab4df8e232df738f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerCombat
-  movement: {fileID: 1460620440}
-  anim: {fileID: 1348279394}
-  physDamage: 20
-  magicDamage: 15
-  attackRadius: 2.5
-  swordPoint: {fileID: 1799586}
-  firePoint: {fileID: 184775150}
-  magicProjectilePrefab: {fileID: 1841410775532492781, guid: ffb544c8a7ab9264ab4af36c9833dd4a, type: 3}
-  magicSlider: {fileID: 772000136}
-  magicCooldown: 3
-  magicTimer: 0
-  attackLockTime: 1.967
-  magicLockTime: 1.2
---- !u!114 &1460620439
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1460620437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1fb81bbd7b984184cbb65f6a106ced72, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 100
-  currentHealth: 100
-  isPlayer: 1
-  healthSlider: {fileID: 1636525102}
-  anim: {fileID: 1348279394}
-  movement: {fileID: 1460620440}
-  hitStunTime: 0.5
-  deathDelay: 3.5
---- !u!114 &1460620440
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1460620437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e91c1e8ff5030f448637b26b1514b1a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  controller: {fileID: 1460620441}
-  anim: {fileID: 1348279394}
-  speed: 5
-  sprintMultiplier: 2
-  gravity: -9.63
-  canMove: 1
 --- !u!143 &1460620441
 CharacterController:
   m_ObjectHideFlags: 0
@@ -19567,6 +19505,39 @@ Transform:
   - {fileID: 958312986}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1460620446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1460620437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9138128a8870714a88744d0a403a5cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  magicPrefab: {fileID: 1841410775532492781, guid: ffb544c8a7ab9264ab4af36c9833dd4a, type: 3}
+  firePoint: {fileID: 184775150}
+  swordPoint: {fileID: 1799586}
+  attackRadius: 1.5
+  canMove: 1
+--- !u!114 &1460620447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1460620437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e65a159fa2a94b248a7de92950521a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerView
+  anim: {fileID: 1348279394}
+  hpSlider: {fileID: 1636525102}
+  magicSlider: {fileID: 772000136}
+  magicFill: {fileID: 2067155165}
 --- !u!1 &1466224655 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6175071860439895333, guid: c728df390021ba54a986b8d49b762c4a, type: 3}

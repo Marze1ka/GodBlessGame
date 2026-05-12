@@ -54,10 +54,12 @@ public class EnemyAI : MonoBehaviour
 
     void DealDamage()
     {
-        if (Vector3.Distance(transform.position, player.position) <= attackRange + 0.5f)
+        // Ищем новый контроллер игрока
+        PlayerController pc = player.GetComponent<PlayerController>();
+        if (pc != null)
         {
-            Health playerHealth = player.GetComponent<Health>();
-            if (playerHealth != null) playerHealth.TakeDamage(damage, DamageType.Physical);
+            // Вызываем метод урона, который мы прописали в PlayerController
+            pc.ApplyDamage(damage);
         }
     }
 }

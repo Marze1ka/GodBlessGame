@@ -4,9 +4,8 @@ using System.Collections.Generic;
 public class SaveLoadInteractor
 {
     private readonly IPlayerDataRepository _playerRepo;
-    private readonly IEnemyRepository _enemyRepo; // Этого поля не хватало (Ошибка CS0103)
+    private readonly IEnemyRepository _enemyRepo;
 
-    // Конструктор теперь принимает ДВА аргумента (Исправляет ошибку CS1729)
     public SaveLoadInteractor(IPlayerDataRepository playerRepo, IEnemyRepository enemyRepo)
     {
         _playerRepo = playerRepo;
@@ -15,20 +14,23 @@ public class SaveLoadInteractor
 
     public void SaveGame()
     {
-        // 1. СОХРАНЯЕМ ИГРОКА
+        // 1. СОХРАНЯЕМ ИГРОКА (Теперь через PlayerController)
         GameObject playerObj = GameObject.FindWithTag("Player");
         if (playerObj != null)
         {
-            Health pHealth = playerObj.GetComponent<Health>();
-            PlayerData pData = new PlayerData
+            PlayerController pc = playerObj.GetComponent<PlayerController>();
+            if (pc != null)
             {
-                HP = pHealth.currentHealth,
-                Position = playerObj.transform.position
-            };
-            _playerRepo.Save(pData);
+                PlayerData pData = new PlayerData
+                {
+                    HP = pc.GetModel().Health, // Берем ХП из модели через контроллер
+                    Position = playerObj.transform.position
+                };
+                _playerRepo.Save(pData);
+            }
         }
 
-        // 2. СОХРАНЯЕМ ВРАГОВ
+        // 2. СОХРАНЯЕМ ВРАГОВ (Остается как было, у них остался скрипт Health)
         EnemySaveData eSaveData = new EnemySaveData();
         Health[] allUnits = Object.FindObjectsByType<Health>(FindObjectsSortMode.None);
 
@@ -45,7 +47,7 @@ public class SaveLoadInteractor
             }
         }
         _enemyRepo.Save(eSaveData);
-        Debug.Log("Интерактор: Все данные сохранены.");
+        Debug.Log("Интерактор: Все данные успешно сохранены.");
     }
 
     public void LoadGame()
@@ -57,15 +59,16 @@ public class SaveLoadInteractor
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null)
             {
+                PlayerController pc = playerObj.GetComponent<PlayerController>();
                 CharacterController cc = playerObj.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
+
+                if (cc != null) cc.enabled = false; // Выключаем для телепортации
 
                 playerObj.transform.position = pData.Position;
-                Health h = playerObj.GetComponent<Health>();
-                h.currentHealth = pData.HP;
-                if (h.healthSlider != null) h.healthSlider.value = pData.HP;
 
-                if (cc != null) cc.enabled = true;
+                if (pc != null) pc.SetHealthFromSave(pData.HP); // Загружаем ХП в модель
+
+                if (cc != null) cc.enabled = true; // Включаем обратно
             }
         }
 
@@ -83,8 +86,11 @@ public class SaveLoadInteractor
 
                     enemyObj.transform.position = enemyInfo.position;
                     Health h = enemyObj.GetComponent<Health>();
-                    h.currentHealth = enemyInfo.currentHP;
-                    if (h.healthSlider != null) h.healthSlider.value = enemyInfo.currentHP;
+                    if (h != null)
+                    {
+                        h.currentHealth = enemyInfo.currentHP;
+                        if (h.healthSlider != null) h.healthSlider.value = enemyInfo.currentHP;
+                    }
 
                     if (agent != null) agent.enabled = true;
                 }

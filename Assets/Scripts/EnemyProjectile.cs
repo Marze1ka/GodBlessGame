@@ -12,12 +12,23 @@ public class EnemyProjectile : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Health targetHealth = other.GetComponent<Health>();
- 
-        if (targetHealth != null && targetHealth.isPlayer)
+        // ѕровер€ем, попали ли мы в игрока (через его новый контроллер)
+        PlayerController pc = other.GetComponent<PlayerController>();
+
+        if (pc != null)
         {
-            targetHealth.TakeDamage(damage, DamageType.Magical);
-            Destroy(gameObject);
+            pc.ApplyDamage(damage); // Ќаносим урон игроку
+            Destroy(gameObject);    // ”дал€ем снар€д
+        }
+
+        // ≈сли попали не в игрока, а в стену или преп€тствие
+        else if (other.gameObject.layer == 0) // Layer 0 - это Default (стены/пол)
+        {
+            // ≈сли это не моб (чтобы снар€ды не взрывались об самих мобов)
+            if (other.GetComponent<Health>() == null)
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }
