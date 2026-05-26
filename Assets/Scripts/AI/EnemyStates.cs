@@ -13,11 +13,25 @@ public class IdleState : EnemyState
 
     public override void Update()
     {
-        // В мирном режиме мы ничего не делаем. 
-        // Переход в Chase произойдет только через OnHit в скрипте EnemyBaseAI.
+        // ПРОВЕРКА: Если галочка "Мирный" СНЯТА (моб агрессивный)
+        if (!context.isPeaceful)
+        {
+            float distance = Vector3.Distance(context.transform.position, context.player.position);
+
+            // Только если мы НЕ мирные, мы переходим в погоню
+            if (distance <= context.detectionRange)
+            {
+                Debug.Log(context.gameObject.name + " (Агрессивный) заметил игрока!");
+                stateMachine.ChangeState(new ChaseState(stateMachine, context));
+            }
+        }
+        else
+        {
+            // Если моб мирный, он просто стоит в Idle. 
+            // Мы здесь ничего не пишем, поэтому он никогда не перейдет в Chase сам.
+        }
     }
 }
-
 // --- 2. АГРЕССИЯ / ПОГОНЯ (CHASE) ---
 public class ChaseState : EnemyState
 {
@@ -27,14 +41,35 @@ public class ChaseState : EnemyState
     {
         if (!context.agent.enabled || !context.agent.isOnNavMesh) return;
 
-        context.agent.isStopped = false;
-        context.agent.SetDestination(context.player.position);
-        context.anim.SetFloat("Speed", context.agent.velocity.magnitude);
-
         float distance = Vector3.Distance(context.transform.position, context.player.position);
-        if (distance <= context.attackRange)
+
+        // ЛОГИКА ДЛЯ ДАЛЬНИКА
+        if (context.isRanged)
         {
-            stateMachine.ChangeState(new AttackState(stateMachine, context));
+            if (distance <= context.rangedStopDistance)
+            {
+                // Мы на дистанции выстрела — переходим к атаке
+                stateMachine.ChangeState(new AttackState(stateMachine, context));
+            }
+            else
+            {
+                // Мы еще далеко — бежим к игроку
+                context.agent.isStopped = false;
+                context.agent.SetDestination(context.player.position);
+                context.anim.SetFloat("Speed", context.agent.velocity.magnitude);
+            }
+        }
+        // ЛОГИКА ДЛЯ БЛИЖНИКА
+        else
+        {
+            context.agent.isStopped = false;
+            context.agent.SetDestination(context.player.position);
+            context.anim.SetFloat("Speed", context.agent.velocity.magnitude);
+
+            if (distance <= context.attackRange)
+            {
+                stateMachine.ChangeState(new AttackState(stateMachine, context));
+            }
         }
     }
 }
@@ -43,7 +78,7 @@ public class ChaseState : EnemyState
 public class AttackState : EnemyState
 {
     private float lastAttackTime;
-    private float cooldown = 2f;
+    private float cooldown = 3f;
 
     public AttackState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
 
@@ -63,19 +98,37 @@ public class AttackState : EnemyState
         {
             context.anim.SetTrigger("Attack");
 
-            // УРОН ПО ИГРОКУ (MVC)
-            PlayerController pc = context.player.GetComponent<PlayerController>();
-            if (pc != null) pc.ApplyDamage(10f);
+            // ИСПРАВЛЕНИЕ: Выбираем нужную цепочку в зависимости от типа моба
+            if (context.isRanged)
+                context.StartRangedAttackSequence(); // Для магов
+            else
+                context.StartMeleeAttackSequence();  // Для воинов
 
             lastAttackTime = Time.time;
         }
 
-        if (Vector3.Distance(context.transform.position, context.player.position) > context.attackRange + 0.5f)
+        // Выход из состояния
+        float distance = Vector3.Distance(context.transform.position, context.player.position);
+        if (distance > context.attackRange + 0.5f)
         {
             stateMachine.ChangeState(new ChaseState(stateMachine, context));
         }
     }
+
+    public override void Exit()
+    {
+        // Если моб передумал атаковать (ты убежал), отменяем выстрел
+        context.CancelInvoke("SpawnProjectileLogic");
+    }
 }
+
+
+
+
+
+
+// НОВАЯ ФУНКЦИЯ ЗАДЕРЖКИ
+
 
 // --- 4. БЕГСТВО (FLEE) ---
 public class FleeState : EnemyState

@@ -1,78 +1,105 @@
 using UnityEngine;
 
-// 1. ПОКОЙ
+// 1. ПОКОЙ БОССА
 public class BossIdleState : EnemyState
 {
     public BossIdleState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
-    public override void Enter() { if (context.agent.isOnNavMesh) context.agent.isStopped = true; context.anim.SetFloat("Speed", 0); }
+    public override void Enter()
+    {
+        if (context.agent.isOnNavMesh) context.agent.isStopped = true;
+        context.anim.SetFloat("Speed", 0);
+    }
 }
 
-// 2. ПОГОНЯ
+// 2. ПОГОНЯ (ВЫБОР ЗОНЫ)
 public class BossChaseState : EnemyState
 {
     public BossChaseState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
+
     public override void Update()
     {
         if (!context.agent.enabled || !context.agent.isOnNavMesh) return;
-        context.agent.isStopped = false;
-        context.agent.SetDestination(context.player.position);
-        context.anim.SetFloat("Speed", context.agent.velocity.magnitude);
 
-        if (Vector3.Distance(context.transform.position, context.player.position) <= context.attackRange)
+        float distance = Vector3.Distance(context.transform.position, context.player.position);
+        BossAI boss = (BossAI)context;
+
+        // ЗОНА 1: В упор (Меч)
+        if (distance <= context.attackRange)
         {
-            // Берем ссылку на настройки Босса
-            BossAI boss = (BossAI)context;
-
-            // С шансом 20% сильная атака, иначе обычная
-            if (Random.value < 0.2f)
-                stateMachine.ChangeState(new BossPowerAttackState(stateMachine, context));
-            else
-                stateMachine.ChangeState(new BossAttackState(stateMachine, context));
+            stateMachine.ChangeState(new BossMeleeAttackState(stateMachine, context));
+        }
+        // ЗОНА 2: Средняя (Магия)
+        else if (distance <= boss.rangedDistance)
+        {
+            stateMachine.ChangeState(new BossRangedState(stateMachine, context));
+        }
+        // ЗОНА 3: Далеко (Бежим)
+        else
+        {
+            context.agent.isStopped = false;
+            context.agent.SetDestination(context.player.position);
+            context.anim.SetFloat("Speed", context.agent.velocity.magnitude);
         }
     }
 }
 
-// 3. ОБЫЧНАЯ АТАКА
-public class BossAttackState : EnemyState
+// 3. СОСТОЯНИЕ: БЛИЖНИЙ БОЙ
+public class BossMeleeAttackState : EnemyState
 {
-    private float lastTime;
-    public BossAttackState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
+    private float timer = 1.5f;
+    public BossMeleeAttackState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
+
     public override void Enter() { if (context.agent.isOnNavMesh) context.agent.isStopped = true; }
+
     public override void Update()
     {
-        if (Time.time > lastTime + 2f)
+        timer += Time.deltaTime;
+        if (timer >= 2f)
         {
-            context.anim.SetTrigger("Attack");
-            PlayerController pc = context.player.GetComponent<PlayerController>();
-            if (pc != null) pc.ApplyDamage(((BossAI)context).normalDamage);
-            lastTime = Time.time;
+            bool isStrong = Random.value > 0.5f;
+            ((BossAI)context).isUsingStrongMelee = isStrong;
+
+            // Только триггеры меча
+            context.anim.SetTrigger(isStrong ? "PowerAttack" : "Attack");
+            context.StartMeleeAttackSequence();
+            timer = 0;
         }
-        if (Vector3.Distance(context.transform.position, context.player.position) > context.attackRange + 1f)
+
+        if (Vector3.Distance(context.transform.position, context.player.position) > context.attackRange + 0.5f)
             stateMachine.ChangeState(new BossChaseState(stateMachine, context));
     }
+
+    public override void Exit() { context.CancelInvoke("ExecuteMeleeLogic"); }
 }
 
-// 4. СИЛЬНАЯ АТАКА (Добавили задержку перед следующим ударом)
-public class BossPowerAttackState : EnemyState
+// 4. СОСТОЯНИЕ: ДАЛЬНИЙ БОЙ
+public class BossRangedState : EnemyState
 {
-    private float stateTimer;
-    public BossPowerAttackState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
-    public override void Enter()
-    {
-        stateTimer = 0;
-        if (context.agent.isOnNavMesh) context.agent.isStopped = true;
-        context.anim.SetTrigger("PowerAttack");
+    private float timer = 2f;
+    public BossRangedState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
 
-        PlayerController pc = context.player.GetComponent<PlayerController>();
-        if (pc != null) pc.ApplyDamage(((BossAI)context).powerDamage);
-    }
+    public override void Enter() { if (context.agent.isOnNavMesh) context.agent.isStopped = true; context.anim.SetFloat("Speed", 0); }
+
     public override void Update()
     {
-        stateTimer += Time.deltaTime;
-        // Ждем 2 секунды, прежде чем Босс снова сможет бежать или атаковать
-        if (stateTimer >= 2f)
+        // Поворот к игроку
+        Vector3 dir = (context.player.position - context.transform.position).normalized;
+        dir.y = 0;
+        context.transform.rotation = Quaternion.Slerp(context.transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
+
+        timer += Time.deltaTime;
+        if (timer >= 3f)
         {
-            stateMachine.ChangeState(new BossChaseState(stateMachine, context));
+            // ТОЛЬКО триггер магии
+            context.anim.SetTrigger("Cast");
+            context.StartRangedAttackSequence();
+            timer = 0;
         }
+
+        float dist = Vector3.Distance(context.transform.position, context.player.position);
+        if (dist < context.attackRange - 0.5f || dist > ((BossAI)context).rangedDistance)
+            stateMachine.ChangeState(new BossChaseState(stateMachine, context));
     }
+
+    public override void Exit() { context.CancelInvoke("ExecuteRangedLogic"); }
 }

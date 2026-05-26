@@ -48,24 +48,26 @@ public class Health : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
-        // Переключаем ИИ в состояние смерти (чтобы не было ошибок NavMesh)
+        // Пытаемся найти ИИ, чтобы переключить в состояние смерти
         EnemyBaseAI ai = GetComponent<EnemyBaseAI>();
         if (ai != null)
         {
             ai.stateMachine.ChangeState(new DeathState(ai.stateMachine, ai));
         }
 
-        if (isPlayer)
+        // ЛАБА 7: Начисляем очки, если умер НЕ ИГРОК
+        if (!isPlayer)
         {
-            // Здесь должна быть твоя корутина вызова экрана смерти (GameManager)
-            // Мы её писали раньше в PlayerController, но можно оставить и тут
+            if (ScoreboardManager.Instance != null)
+            {
+                ScoreboardManager.Instance.AddKill();
+            }
+
+            Destroy(gameObject, 3.0f); // Удаляем моба через 3 сек
         }
         else
         {
-            // --- СТРОЧКИ С ОШИБКОЙ УДАЛЕНЫ ---
-
-            // Просто удаляем моба через 3 сек
-            Destroy(gameObject, 3.0f);
+            // Логика смерти игрока (экран рестарта), которую мы писали раньше
         }
     }
 }
