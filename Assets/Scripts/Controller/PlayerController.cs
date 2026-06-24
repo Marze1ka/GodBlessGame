@@ -1,57 +1,108 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     private PlayerModel _model;
     private PlayerView _view;
     private CharacterController _cc;
+    private bool _hasPendingSavedHealth;
+    private float _pendingSavedHealth;
 
-    [Header("Настройки боя")]
-    public GameObject magicPrefab;   // Префаб магического шара
-    public Transform firePoint;      // Точка вылета магии
-    public Transform swordPoint;     // Точка на мече
-    public float attackRadius = 1.5f; // Радиус удара мечом
+    [Header("Combat settings")]
+    public GameObject magicPrefab;
+    public Transform firePoint;
+    public Transform swordPoint;
+    public float attackRadius = 1.5f;
 
-    private Vector3 _velocity;       // Скорость падения (гравитация)
-    public bool canMove = true;      // Флаг блокировки управления
+    private Vector3 _velocity;
+    public bool canMove = true;
 
-    // МЕТОД ИНИЦИАЛИЗАЦИИ (вызывается из LevelBootstrapper)
-    public void Initialize(PlayerModel model, PlayerView view)
+    private void Awake()
     {
-        _model = model;
-        _view = view;
         _cc = GetComponent<CharacterController>();
-
-        if (_cc == null) Debug.LogError("ОШИБКА: На объекте Player нет компонента CharacterController!");
-        if (_view == null) Debug.LogError("ОШИБКА: Ссылка на PlayerView пуста!");
-
-        _model.OnHealthChanged += _view.SetHealth;
-        _model.OnMagicTimerChanged += _view.SetMagic;
-        _model.OnDeath += HandleDeath;
-
-        _view.Initialize(_model.MaxHealth, _model.MagicCooldown);
-        _view.SetHealth(_model.Health);
+        _view = GetComponent<PlayerView>();
     }
 
-    // МЕТОДЫ ДЛЯ СИСТЕМЫ СОХРАНЕНИЯ
-    public PlayerModel GetModel() => _model;
+    private void Start()
+    {
+        EnsureInitialized();
+    }
+
+    public void Initialize(PlayerModel model, PlayerView view)
+    {
+        if (_model != null)
+        {
+            return;
+        }
+
+        _model = model ?? new PlayerModel();
+        _view = view != null ? view : GetComponent<PlayerView>();
+        _cc = _cc != null ? _cc : GetComponent<CharacterController>();
+
+        if (_view != null)
+        {
+            _model.OnHealthChanged += _view.SetHealth;
+            _model.OnMagicTimerChanged += _view.SetMagic;
+            _view.Initialize(_model.MaxHealth, _model.MagicCooldown);
+            _view.SetHealth(_model.Health);
+        }
+
+        _model.OnDeath += HandleDeath;
+
+        if (_hasPendingSavedHealth)
+        {
+            ApplySavedHealth(_pendingSavedHealth);
+            _hasPendingSavedHealth = false;
+        }
+    }
+
+    public void EnsureInitialized()
+    {
+        if (_model != null)
+        {
+            return;
+        }
+
+        Initialize(new PlayerModel(), _view != null ? _view : GetComponent<PlayerView>());
+    }
+
+    public PlayerModel GetModel()
+    {
+        EnsureInitialized();
+        return _model;
+    }
 
     public void SetHealthFromSave(float hp)
     {
-        _model.Health = hp;
-        _view.SetHealth(hp);
+        if (_model == null)
+        {
+            _pendingSavedHealth = hp;
+            _hasPendingSavedHealth = true;
+            EnsureInitialized();
+            return;
+        }
+
+        ApplySavedHealth(hp);
     }
 
-
-    void Update()
+    private void ApplySavedHealth(float hp)
     {
-        // ПРОВЕРКА 1: Работает ли Update вообще?
-        // Раскомментируй строку ниже, чтобы увидеть спам в консоли
-        // Debug.Log("Update работает!");
+        EnsureInitialized();
+        _model.Health = Mathf.Clamp(hp, 0, _model.MaxHealth);
 
-        if (_cc == null || !_cc.enabled) return; // Если контроллер выключен — стоим
-        if (Time.timeScale == 0) return;         // Если пауза — стоим
+        if (_view != null)
+        {
+            _view.SetHealth(_model.Health);
+        }
+    }
+
+    private void Update()
+    {
+        EnsureInitialized();
+
+        if (_cc == null || !_cc.enabled) return;
+        if (Time.timeScale == 0) return;
 
         _model.UpdateMagicTimer(Time.deltaTime);
 
@@ -70,130 +121,139 @@ public class PlayerController : MonoBehaviour
         Vector3 move = transform.right * x + transform.forward * z;
         float currentSpeed = _model.MoveSpeed;
 
-        // ПРОВЕРКА БЕГА
-        bool isSprinting = Input.GetKey(KeyCode.LeftShift) && move.magnitude > 0.1f;
-        if (isSprinting)
+        bool sprinting = Input.GetKey(KeyCode.LeftShift) && move.magnitude > 0.1f;
+        if (sprinting)
         {
             currentSpeed *= _model.SprintMultiplier;
         }
 
-        // ДВИГАЕМ ПЕРСОНАЖА
         _cc.Move(move * currentSpeed * Time.deltaTime);
 
-        // ГРАВИТАЦИЯ
         if (_cc.isGrounded && _velocity.y < 0)
         {
             _velocity.y = -2f;
         }
+
         _velocity.y += -9.81f * Time.deltaTime;
         _cc.Move(_velocity * Time.deltaTime);
 
-        // СВЯЗЬ С АНИМАЦИЕЙ (ИСПРАВЛЕНО)
-        // Мы берем "силу нажатия" (x, z) и умножаем на скорость
         float inputMagnitude = new Vector2(x, z).magnitude;
-        float speedForAnim = inputMagnitude * (isSprinting ? 5f : 2f); // 2 - ходьба, 5 - бег
+        float speedForAnim = inputMagnitude * (sprinting ? 5f : 2f);
 
-        _view.UpdateMoveAnimation(speedForAnim);
+        if (_view != null)
+        {
+            _view.UpdateMoveAnimation(speedForAnim);
+        }
     }
 
     private void HandleCombat()
     {
-        // ЛКМ - Физическая атака
         if (Input.GetMouseButtonDown(0))
         {
             StartCoroutine(PhysicalAttackRoutine());
         }
 
-        // ПКМ - Магическая атака (с проверкой кулдауна из модели)
         if (Input.GetMouseButtonDown(1) && _model.IsMagicReady)
         {
             StartCoroutine(MagicAttackRoutine());
         }
     }
 
-    IEnumerator PhysicalAttackRoutine()
+    private IEnumerator PhysicalAttackRoutine()
     {
         canMove = false;
-        _view.PlayAnimation("Attack");
 
-        yield return new WaitForSeconds(0.4f); // Момент взмаха
-
-        // Наносим урон сферой
-        Collider[] hits = Physics.OverlapSphere(swordPoint.position, attackRadius);
-        foreach (var hit in hits)
+        if (_view != null)
         {
-            if (hit.gameObject == gameObject) continue;
+            _view.PlayAnimation("Attack");
+        }
 
-            // У врагов всё еще старый скрипт Health, так что ищем его
-            Health h = hit.GetComponent<Health>();
-            if (h != null)
+        yield return new WaitForSeconds(0.4f);
+
+        if (swordPoint != null)
+        {
+            Collider[] hits = Physics.OverlapSphere(swordPoint.position, attackRadius);
+            foreach (Collider hit in hits)
             {
-                h.TakeDamage(20, DamageType.Physical);
-                break;
+                if (hit.gameObject == gameObject) continue;
+
+                Health health = hit.GetComponent<Health>();
+                if (health != null)
+                {
+                    health.TakeDamage(20, DamageType.Physical);
+                    break;
+                }
             }
         }
 
-        yield return new WaitForSeconds(0.4f); // Конец анимации
+        yield return new WaitForSeconds(0.4f);
         canMove = true;
     }
 
-    IEnumerator MagicAttackRoutine()
+    private IEnumerator MagicAttackRoutine()
     {
-        _model.ResetMagicTimer(); // Сбрасываем кулдаун в модели
+        _model.ResetMagicTimer();
         canMove = false;
-        _view.PlayAnimation("Magic");
 
+        if (_view != null)
+        {
+            _view.PlayAnimation("Magic");
+        }
 
         yield return new WaitForSeconds(0.5f);
-        Instantiate(magicPrefab, firePoint.position, transform.rotation);
+
+        if (magicPrefab != null && firePoint != null)
+        {
+            Instantiate(magicPrefab, firePoint.position, transform.rotation);
+        }
 
         yield return new WaitForSeconds(0.5f);
         canMove = true;
     }
 
-    // Этот метод вызывается врагами при попадании по игроку
     public void ApplyDamage(float amount)
     {
+        EnsureInitialized();
+
         if (_model.Health <= 0) return;
 
         _model.ChangeHealth(-amount);
-        _view.PlayAnimation("Hit");
+
+        if (_view != null)
+        {
+            _view.PlayAnimation("Hit");
+        }
+
+        Debug.Log($"Player damaged: -{amount}, HP={_model.Health}");
     }
 
     private void HandleDeath()
     {
-        if (!this.enabled) return; // Чтобы не срабатывало дважды
-
+        if (!enabled) return;
         StartCoroutine(DeathSequenceRoutine());
     }
 
-    IEnumerator DeathSequenceRoutine()
+    private IEnumerator DeathSequenceRoutine()
     {
-        Debug.Log("Игрок мертв. Запуск последовательности смерти...");
-
         canMove = false;
-        if (_cc != null) _cc.enabled = false; // Отключаем физику, чтобы не упасть сквозь пол
+        if (_cc != null) _cc.enabled = false;
 
-        _view.PlayAnimation("Death"); // Запускаем анимацию падения
+        if (_view != null)
+        {
+            _view.PlayAnimation("Death");
+        }
 
-        // Ждем 3 секунды, пока рыцарь падает (можешь изменить время под анимацию)
         yield return new WaitForSecondsRealtime(3f);
 
-        // Ищем GameManager на сцене и просим его показать экран смерти
-        GameManager gm = Object.FindAnyObjectByType<GameManager>();
-        if (gm != null)
+        GameManager gameManager = Object.FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
         {
-            gm.ShowGameOverScreen();
-        }
-        else
-        {
-            Debug.LogError("КРИТИЧЕСКАЯ ОШИБКА: GameManager не найден на сцене!");
+            gameManager.ShowGameOverScreen();
         }
 
-        this.enabled = false; // Выключаем контроллер совсем
+        enabled = false;
     }
 
-    // Рисуем сферу удара в окне Scene
     private void OnDrawGizmosSelected()
     {
         if (swordPoint != null)

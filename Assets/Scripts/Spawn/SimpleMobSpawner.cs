@@ -1,12 +1,15 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class SimpleMobSpawner : MonoBehaviour
 {
-    [Header("Кого спавним?")]
-    public GameObject mobPrefab; // Сюда перетаскиваем префаб моба
+    [Header("РљРѕРіРѕ СЃРїР°РІРЅРёРј?")]
+    public GameObject mobPrefab;
 
-    [Header("Настройки")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё")]
     public bool spawnOnStart = true;
+
+    private GameObject _spawnedMob;
 
     private void Start()
     {
@@ -16,22 +19,53 @@ public class SimpleMobSpawner : MonoBehaviour
         }
     }
 
-    public void Spawn()
+    public string GetSaveId()
+    {
+        Vector3 pos = transform.position;
+        return $"{SceneManager.GetActiveScene().name}:Spawner:{gameObject.name}:{pos.x:F2}:{pos.y:F2}:{pos.z:F2}";
+    }
+
+    public bool MatchesSaveId(string saveId)
+    {
+        return GetSaveId() == saveId;
+    }
+
+    public GameObject Spawn()
     {
         if (mobPrefab == null)
         {
-            Debug.LogWarning("Спавнер на объекте " + gameObject.name + " пустой! Забыли префаб.");
-            return;
+            Debug.LogWarning("РЎРїР°РІРЅРµСЂ РЅР° РѕР±СЉРµРєС‚Рµ " + gameObject.name + " РїСѓСЃС‚РѕР№! Р—Р°Р±С‹Р»Рё РїСЂРµС„Р°Р±.");
+            return null;
         }
 
-        // Создаем моба ровно в позиции этого спавнера
-        Instantiate(mobPrefab, transform.position, transform.rotation);
+        if (_spawnedMob != null)
+        {
+            return _spawnedMob;
+        }
+
+        _spawnedMob = Instantiate(mobPrefab, transform.position, transform.rotation);
+
+        EnemySaveIdentity identity = _spawnedMob.GetComponent<EnemySaveIdentity>();
+        if (identity == null)
+        {
+            identity = _spawnedMob.AddComponent<EnemySaveIdentity>();
+        }
+
+        identity.Configure(GetSaveId());
+        return _spawnedMob;
     }
 
-    // Рисуем иконку в окне Scene, чтобы спавнеры было видно
+    public void ClearTrackedMob(GameObject mob)
+    {
+        if (_spawnedMob == mob)
+        {
+            _spawnedMob = null;
+        }
+    }
+
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawSphere(transform.position, 0.5f); // Маленькая зеленая сфера на месте спавна
+        Gizmos.DrawSphere(transform.position, 0.5f);
     }
 }

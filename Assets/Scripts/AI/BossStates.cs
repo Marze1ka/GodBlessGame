@@ -1,39 +1,54 @@
 using UnityEngine;
 
-// 1. œŒ Œ… ¡Œ——¿
 public class BossIdleState : EnemyState
 {
     public BossIdleState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
+
     public override void Enter()
     {
         if (context.agent.isOnNavMesh) context.agent.isStopped = true;
         context.anim.SetFloat("Speed", 0);
     }
+
+    public override void Update()
+    {
+        if (context.peacefulMode || !context.ResolvePlayerReference())
+        {
+            return;
+        }
+
+        float distance = Vector3.Distance(context.transform.position, context.player.position);
+        if (distance <= context.detectionRange)
+        {
+            stateMachine.ChangeState(new BossChaseState(stateMachine, context));
+        }
+    }
 }
 
-// 2. œŒ√ŒÕﬂ (¬€¡Œ– «ŒÕ€)
 public class BossChaseState : EnemyState
 {
     public BossChaseState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
 
     public override void Update()
     {
+        if (!context.ResolvePlayerReference())
+        {
+            return;
+        }
+
         if (!context.agent.enabled || !context.agent.isOnNavMesh) return;
 
         float distance = Vector3.Distance(context.transform.position, context.player.position);
         BossAI boss = (BossAI)context;
 
-        // «ŒÕ¿ 1: ¬ ÛÔÓ (ÃÂ˜)
         if (distance <= context.attackRange)
         {
             stateMachine.ChangeState(new BossMeleeAttackState(stateMachine, context));
         }
-        // «ŒÕ¿ 2: —Â‰Ìˇˇ (Ã‡„Ëˇ)
-        else if (distance <= boss.rangedDistance)
+        else if (distance <= boss.RangedDistance)
         {
             stateMachine.ChangeState(new BossRangedState(stateMachine, context));
         }
-        // «ŒÕ¿ 3: ƒ‡ÎÂÍÓ (¡ÂÊËÏ)
         else
         {
             context.agent.isStopped = false;
@@ -43,46 +58,66 @@ public class BossChaseState : EnemyState
     }
 }
 
-// 3. —Œ—“ŒﬂÕ»≈: ¡À»∆Õ»… ¡Œ…
 public class BossMeleeAttackState : EnemyState
 {
     private float timer = 1.5f;
+
     public BossMeleeAttackState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
 
-    public override void Enter() { if (context.agent.isOnNavMesh) context.agent.isStopped = true; }
+    public override void Enter()
+    {
+        if (context.agent.isOnNavMesh) context.agent.isStopped = true;
+    }
 
     public override void Update()
     {
+        if (!context.ResolvePlayerReference())
+        {
+            return;
+        }
+
         timer += Time.deltaTime;
         if (timer >= 2f)
         {
-            bool isStrong = Random.value > 0.5f;
-            ((BossAI)context).isUsingStrongMelee = isStrong;
+            BossAI boss = (BossAI)context;
+            boss.SelectMeleeAttackType();
 
-            // “ÓÎ¸ÍÓ ÚË„„Â˚ ÏÂ˜‡
-            context.anim.SetTrigger(isStrong ? "PowerAttack" : "Attack");
             context.StartMeleeAttackSequence();
+            context.anim.SetTrigger("Attack");
             timer = 0;
         }
 
         if (Vector3.Distance(context.transform.position, context.player.position) > context.attackRange + 0.5f)
+        {
             stateMachine.ChangeState(new BossChaseState(stateMachine, context));
+        }
     }
 
-    public override void Exit() { context.CancelInvoke("ExecuteMeleeLogic"); }
+    public override void Exit()
+    {
+        // –ï—Å–ª–∏ —É–¥–∞—Ä —É–∂–µ –Ω–∞—á–∞–ª—Å—è, –Ω–µ –æ—Ç–º–µ–Ω—è–µ–º –µ–≥–æ –ø—Ä–∏ —Å–º–µ–Ω–µ —Å–æ—Å—Ç–æ—è–Ω–∏—è.
+    }
 }
 
-// 4. —Œ—“ŒﬂÕ»≈: ƒ¿À‹Õ»… ¡Œ…
 public class BossRangedState : EnemyState
 {
     private float timer = 2f;
+
     public BossRangedState(EnemyStateMachine machine, EnemyBaseAI context) : base(machine, context) { }
 
-    public override void Enter() { if (context.agent.isOnNavMesh) context.agent.isStopped = true; context.anim.SetFloat("Speed", 0); }
+    public override void Enter()
+    {
+        if (context.agent.isOnNavMesh) context.agent.isStopped = true;
+        context.anim.SetFloat("Speed", 0);
+    }
 
     public override void Update()
     {
-        // œÓ‚ÓÓÚ Í Ë„ÓÍÛ
+        if (!context.ResolvePlayerReference())
+        {
+            return;
+        }
+
         Vector3 dir = (context.player.position - context.transform.position).normalized;
         dir.y = 0;
         context.transform.rotation = Quaternion.Slerp(context.transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
@@ -90,16 +125,20 @@ public class BossRangedState : EnemyState
         timer += Time.deltaTime;
         if (timer >= 3f)
         {
-            // “ŒÀ‹ Œ ÚË„„Â Ï‡„ËË
             context.anim.SetTrigger("Cast");
             context.StartRangedAttackSequence();
             timer = 0;
         }
 
         float dist = Vector3.Distance(context.transform.position, context.player.position);
-        if (dist < context.attackRange - 0.5f || dist > ((BossAI)context).rangedDistance)
+        if (dist < context.attackRange - 0.5f || dist > ((BossAI)context).RangedDistance)
+        {
             stateMachine.ChangeState(new BossChaseState(stateMachine, context));
+        }
     }
 
-    public override void Exit() { context.CancelInvoke("ExecuteRangedLogic"); }
+    public override void Exit()
+    {
+        context.CancelPendingRangedAttack();
+    }
 }

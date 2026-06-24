@@ -1,10 +1,11 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
-[Serializable] // Позволяет превращать данные в текст (JSON)
+[Serializable]
 public class PlayerData
 {
     public float HP;
-    public float MP; // Мана (твоя полоска магии)
+    public float MP;
     public Vector3 Position;
+    public string SceneName;
 }

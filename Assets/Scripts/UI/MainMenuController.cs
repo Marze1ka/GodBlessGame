@@ -3,38 +3,50 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuController : MonoBehaviour
 {
+    private const string HardSceneName = "Scene_Game";
+    private const string PeacefulSceneName = "Scene_Game_Peaceful";
+
     public MainMenuView view;
     private MainMenuModel _model;
 
     private void Awake()
     {
         _model = new MainMenuModel();
-        // Подтягиваем начальное значение из сервиса
-        _model.Volume = GameBootstrapper.AudioService.GetVolume();
+
+        if (GameBootstrapper.AudioService != null)
+        {
+            _model.Volume = GameBootstrapper.AudioService.GetVolume();
+        }
     }
 
-    // Нажатие кнопки "Играть"
     public void OnPlayClicked()
     {
-        SceneManager.LoadScene("Scene_Game");
+        SceneManager.LoadScene(HardSceneName);
     }
 
-    // Нажатие кнопки "Настройки"
+    public void OnPlayPeacefulClicked()
+    {
+        SceneManager.LoadScene(PeacefulSceneName);
+    }
+
     public void OnSettingsClicked()
     {
         view.ShowSettings(_model.Volume);
     }
 
-    // Нажатие кнопки "Назад" в настройках
     public void OnBackClicked()
     {
         view.ShowMainMenu();
     }
 
-    // Изменение слайдера
     public void OnVolumeChanged(float val)
     {
         _model.Volume = val;
-        GameBootstrapper.AudioService.SetVolume(val);
+        GameBootstrapper.AudioService?.SetVolume(val);
+    }
+
+    public void OnExitClicked()
+    {
+        Application.Quit();
     }
 }

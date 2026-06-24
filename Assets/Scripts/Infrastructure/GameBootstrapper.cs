@@ -1,31 +1,81 @@
+using System;
+using System.Collections;
 using UnityEngine;
 
 public class GameBootstrapper : MonoBehaviour
 {
+    public static GameBootstrapper Instance { get; private set; }
     public static SaveLoadInteractor SaveInteractor { get; private set; }
     public static IAudioService AudioService { get; private set; }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void AutoInitialize()
+    {
+        EnsureInitialized();
+    }
+
+    public static void EnsureInitialized()
+    {
+        if (Instance != null && SaveInteractor != null && AudioService != null)
+        {
+            return;
+        }
+
+        GameBootstrapper bootstrapper = FindAnyObjectByType<GameBootstrapper>();
+        if (bootstrapper == null)
+        {
+            GameObject bootstrapperObject = new GameObject(nameof(GameBootstrapper));
+            bootstrapper = bootstrapperObject.AddComponent<GameBootstrapper>();
+        }
+
+        bootstrapper.InitializeServices();
+    }
+
     private void Awake()
     {
-        // Проверка на дубликаты Bootstrapper
-        GameBootstrapper[] bootstrappers = Object.FindObjectsByType<GameBootstrapper>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        GameBootstrapper[] bootstrappers = UnityEngine.Object.FindObjectsByType<GameBootstrapper>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         if (bootstrappers.Length > 1)
         {
             Destroy(gameObject);
             return;
         }
 
+        Instance = this;
         DontDestroyOnLoad(gameObject);
+        InitializeServices();
+    }
 
-        // Инициализация сервисов и репозиториев
-        AudioService = new AudioService();
+    private void InitializeServices()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
 
-        var playerRepo = new LocalPlayerDataRepository();
-        var enemyRepo = new LocalEnemyRepository();
+        if (AudioService == null)
+        {
+            AudioService = new AudioService();
+        }
 
-        // Теперь передаем ДВА аргумента, и интерактор их примет
-        SaveInteractor = new SaveLoadInteractor(playerRepo, enemyRepo);
+        if (SaveInteractor == null)
+        {
+            var playerRepo = new LocalPlayerDataRepository();
+            var enemyRepo = new LocalEnemyRepository();
+            SaveInteractor = new SaveLoadInteractor(playerRepo, enemyRepo);
+        }
 
-        Debug.Log("GameBootstrapper: Все системы и репозитории запущены.");
+        Debug.Log("GameBootstrapper: systems initialized.");
+    }
+
+    public void RunNextFrame(Action action)
+    {
+        StartCoroutine(RunNextFrameRoutine(action));
+    }
+
+    private IEnumerator RunNextFrameRoutine(Action action)
+    {
+        yield return null;
+        action?.Invoke();
     }
 }

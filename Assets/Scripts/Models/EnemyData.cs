@@ -1,10 +1,11 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
-[Serializable] // Обязательно для сохранения в JSON
+[Serializable]
 public class EnemyData
 {
-    public string enemyID;   // Уникальное имя объекта, чтобы знать, кого куда ставить
+    public string enemyID;
+    public string saveId;
     public float currentHP;
     public Vector3 position;
 }

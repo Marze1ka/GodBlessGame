@@ -6,7 +6,7 @@ public class PlayerView : MonoBehaviour
     public Animator anim;
     public Slider hpSlider;
     public Slider magicSlider;
-    public Image magicFill; // Для смены цвета магии
+    public Image magicFill; // Р”Р»СЏ СЃРјРµРЅС‹ С†РІРµС‚Р° РјР°РіРёРё
 
     public void Initialize(float maxHealth, float maxMagic)
     {
@@ -14,18 +14,31 @@ public class PlayerView : MonoBehaviour
         if (magicSlider != null) magicSlider.maxValue = maxMagic;
     }
 
-    public void SetHealth(float value) => hpSlider.value = value;
-    public void SetMagic(float value) => magicSlider.value = value;
+    public void SetHealth(float value)
+    {
+        if (hpSlider != null) hpSlider.value = value;
+    }
 
-    public void SetMagicColor(Color color) => magicFill.color = color;
+    public void SetMagic(float value)
+    {
+        if (magicSlider != null) magicSlider.value = value;
+    }
 
-    public void PlayAnimation(string trigger) => anim.SetTrigger(trigger);
+    public void SetMagicColor(Color color)
+    {
+        if (magicFill != null) magicFill.color = color;
+    }
+
+    public void PlayAnimation(string trigger)
+    {
+        if (anim != null) anim.SetTrigger(trigger);
+    }
 
     public void UpdateMoveAnimation(float speed)
     {
         if (anim != null)
         {
-            // 0.1f — это время сглаживания. Если поставить 0, анимация переключится мгновенно.
+            // 0.1f вЂ” СЌС‚Рѕ РІСЂРµРјСЏ СЃРіР»Р°Р¶РёРІР°РЅРёСЏ. Р•СЃР»Рё РїРѕСЃС‚Р°РІРёС‚СЊ 0, Р°РЅРёРјР°С†РёСЏ РїРµСЂРµРєР»СЋС‡РёС‚СЃСЏ РјРіРЅРѕРІРµРЅРЅРѕ.
             anim.SetFloat("Speed", speed, 0.1f, Time.deltaTime);
         }
     }

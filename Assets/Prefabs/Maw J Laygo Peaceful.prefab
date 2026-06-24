@@ -624,7 +624,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0531a8dddfd417a4da53b5b9d3f9d7af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossAI
-  peacefulMode: 0
+  peacefulMode: 1
   rangedCombat: 0
   detectionRange: 10
   attackRange: 5

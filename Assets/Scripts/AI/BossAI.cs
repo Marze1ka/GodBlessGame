@@ -2,49 +2,119 @@ using UnityEngine;
 
 public class BossAI : EnemyBaseAI
 {
-    [Header("Настройки Ближнего Боя")]
-    public float weakAttackDamage = 15f;
-    public float strongAttackDamage = 35f;
-    [HideInInspector] public bool isUsingStrongMelee; // Выберется случайно
+    [Header("Р‘РѕРµРІС‹Рµ РґР°РЅРЅС‹Рµ Р±РѕСЃСЃР°")]
+    public BossCombatInfo combatInfo;
 
-    [Header("Настройки Дальнего Боя (Твои префабы)")]
-    public GameObject[] bossProjectiles; // Сюда перетащи 4 своих префаба
-    public float[] projectileDamages;    // Урон для каждого из 4-х снарядов
-    public float rangedDistance = 12f;   // Дистанция стрельбы
+    public bool UseStrongMelee { get; private set; }
+    public float RangedDistance => combatInfo != null ? combatInfo.rangedAttackDistance : rangedStopDistance;
 
-    [HideInInspector] public float currentMagicDamage; // Выбранный урон магии
+    private EnemyWeaponData currentMagicVariant;
 
-    // Добавили override, чтобы исправить ошибку CS0114
-    protected override void Start()
+    protected override void Awake()
     {
-        // Сначала выполняем базовые настройки из EnemyBaseAI (поиск игрока и т.д.)
-        base.Start();
+        base.Awake();
 
-        // Затем настраиваем уникальность Босса
-        isUsingStrongMelee = Random.value > 0.5f;
-
-        if (bossProjectiles.Length >= 4)
+        if (combatInfo == null)
         {
-            int randomIndex = Random.Range(0, bossProjectiles.Length);
-            projectilePrefab = bossProjectiles[randomIndex];
-            currentMagicDamage = projectileDamages[randomIndex];
+            combatInfo = GetComponent<BossCombatInfo>();
         }
-
-        // Перезаписываем начальное состояние на Покой Босса
-        stateMachine.Initialize(new BossIdleState(stateMachine, this));
     }
 
-    private void Update()
+    protected override void Start()
     {
-        stateMachine.Update();
-        // Логика 2-й фазы (ускорение) остается автоматически
+        SelectMagicVariant();
+        base.Start();
+    }
+
+    public void SelectMeleeAttackType()
+    {
+        if (combatInfo == null)
+        {
+            UseStrongMelee = false;
+            return;
+        }
+
+        UseStrongMelee = combatInfo.RollStrongMeleeAttack();
+    }
+
+    public void SelectMagicVariant()
+    {
+        currentMagicVariant = combatInfo != null ? combatInfo.GetRandomMagicVariant() : null;
+        projectilePrefab = currentMagicVariant != null ? currentMagicVariant.projectilePrefab : null;
+    }
+
+    protected override EnemyState CreateInitialState()
+    {
+        return new BossIdleState(stateMachine, this);
+    }
+
+    protected override void EnterCombatState()
+    {
+        stateMachine.ChangeState(new BossChaseState(stateMachine, this));
     }
 
     public override void OnHit()
     {
-        if (stateMachine.CurrentState is BossIdleState)
+        if (stateMachine.CurrentState == null)
         {
-            stateMachine.ChangeState(new BossChaseState(stateMachine, this));
+            return;
+        }
+
+        if (stateMachine.CurrentState.GetType() == typeof(BossIdleState))
+        {
+            EnterCombatState();
+        }
+    }
+
+    protected override float GetMeleeDamage()
+    {
+        if (combatInfo == null)
+        {
+            return base.GetMeleeDamage();
+        }
+
+        return combatInfo.GetMeleeDamage(UseStrongMelee);
+    }
+
+    protected override void ExecuteMeleeLogic()
+    {
+        if (!ResolvePlayerReference())
+        {
+            return;
+        }
+
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        if (playerController == null)
+        {
+            playerController = Object.FindAnyObjectByType<PlayerController>();
+        }
+
+        if (playerController == null)
+        {
+            return;
+        }
+
+        float distanceToPlayer = Vector3.Distance(transform.position, playerController.transform.position);
+        if (distanceToPlayer > attackRange + 1.5f)
+        {
+            return;
+        }
+
+        playerController.ApplyDamage(GetMeleeDamage());
+        Debug.Log("<color=red>BOSS MELEE HIT</color>");
+    }
+
+    protected override void ConfigureProjectile(GameObject projectileObject)
+    {
+        if (currentMagicVariant == null)
+        {
+            return;
+        }
+
+        EnemyProjectile projectile = projectileObject.GetComponent<EnemyProjectile>();
+        if (projectile != null)
+        {
+            projectile.damage = currentMagicVariant.damage;
         }
     }
 }

@@ -1,27 +1,29 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
 public class LevelBootstrapper : MonoBehaviour
 {
     public PlayerView playerView;
     public PlayerController playerController;
 
-    private void Start() // Используем Start, чтобы все объекты успели появиться
+    private void Start() // РСЃРїРѕР»СЊР·СѓРµРј Start, С‡С‚РѕР±С‹ РІСЃРµ РѕР±СЉРµРєС‚С‹ СѓСЃРїРµР»Рё РїРѕСЏРІРёС‚СЊСЃСЏ
     {
+        GameBootstrapper.EnsureInitialized();
+
         if (playerView == null || playerController == null)
         {
-            Debug.LogError("LEVEL BOOTSTRAPPER: Ссылки на View или Controller не установлены в инспекторе!");
+            Debug.LogError("LEVEL BOOTSTRAPPER: РЎСЃС‹Р»РєРё РЅР° View РёР»Рё Controller РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅС‹ РІ РёРЅСЃРїРµРєС‚РѕСЂРµ!");
             return;
         }
 
-        // 1. Создаем Модель (данные)
+        // 1. РЎРѕР·РґР°РµРј РњРѕРґРµР»СЊ (РґР°РЅРЅС‹Рµ)
         PlayerModel playerModel = new PlayerModel();
 
-        // 2. Запускаем Контроллер
+        // 2. Р—Р°РїСѓСЃРєР°РµРј РљРѕРЅС‚СЂРѕР»Р»РµСЂ
         playerController.Initialize(playerModel, playerView);
 
-        Debug.Log("<color=yellow>LEVEL BOOTSTRAPPER: Игрок успешно инициализирован!</color>");
+        Debug.Log("<color=yellow>LEVEL BOOTSTRAPPER: РРіСЂРѕРє СѓСЃРїРµС€РЅРѕ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ!</color>");
 
-        // Скрываем курсор при старте
+        // РЎРєСЂС‹РІР°РµРј РєСѓСЂСЃРѕСЂ РїСЂРё СЃС‚Р°СЂС‚Рµ
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }

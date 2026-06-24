@@ -1255,7 +1255,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71107f3e07c314646a594748106400f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBaseAI
-  isPeaceful: 1
+  isPeaceful: 0
   isRanged: 0
   detectionRange: 10
   attackRange: 2

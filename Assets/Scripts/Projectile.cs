@@ -8,7 +8,7 @@ public class Projectile : MonoBehaviour
 
     void Start()
     {
-        Destroy(gameObject, lifeTime); 
+        Destroy(gameObject, lifeTime);
     }
 
     void Update()
@@ -19,7 +19,7 @@ public class Projectile : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Health health = other.GetComponent<Health>();
-        if (health != null && !health.isPlayer) 
+        if (health != null && !health.playerControlled)
         {
             health.TakeDamage(damage, DamageType.Magical);
             Destroy(gameObject);

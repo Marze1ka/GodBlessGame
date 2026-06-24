@@ -1,26 +1,32 @@
+using TMPro;
 using UnityEngine;
-using TMPro; // Обязательно для текста
+using UnityEngine.SceneManagement;
 
 public class ScoreboardManager : MonoBehaviour
 {
-    // Одиночка (Singleton) — чтобы из любого скрипта написать ScoreboardManager.Instance
     public static ScoreboardManager Instance;
 
-    [Header("Настройки интерфейса")]
-    public TextMeshProUGUI scoreText; // Ссылка на текст на экране
+    [Header("РќР°СЃС‚СЂРѕР№РєРё РёРЅС‚РµСЂС„РµР№СЃР°")]
+    public TextMeshProUGUI scoreText;
 
-    [Header("Событие: Босс (3 убийства)")]
-    public GameObject bossPrefab;    // Префаб босса
-    public Transform bossSpawnPoint; // Точка появления босса
+    [Header("РЎРѕР±С‹С‚РёРµ: Р‘РѕСЃСЃ (3 СѓР±РёР№СЃС‚РІР°)")]
+    public GameObject bossPrefab;
+    public Transform bossSpawnPoint;
 
-    [Header("Событие: Победа (5 убийств)")]
-    public AudioSource victoryAudio; // Объект со звуком победы
+    [Header("РЎРѕР±С‹С‚РёРµ: РџРѕР±РµРґР° (5 СѓР±РёР№СЃС‚РІ)")]
+    public AudioSource victoryAudio;
 
-    private int killCount = 0;
+    private int killCount;
+    private GameObject spawnedBoss;
+
+    public int KillCount => killCount;
+    public bool HasBossAlive =>
+        spawnedBoss != null &&
+        spawnedBoss.GetComponent<Health>() != null &&
+        spawnedBoss.GetComponent<Health>().currentHealth > 0f;
 
     private void Awake()
     {
-        // Инициализация одиночки
         if (Instance == null) Instance = this;
     }
 
@@ -29,17 +35,15 @@ public class ScoreboardManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Эту функцию мы будем вызывать из скрипта Health при смерти моба
     public void AddKill()
     {
         killCount++;
         UpdateUI();
-        Debug.Log("Счетчик: " + killCount);
+        Debug.Log("РЎС‡РµС‚С‡РёРє: " + killCount);
 
-        // Проверка условий ТЗ
         if (killCount == 3)
         {
-            SpawnBoss();
+            SpawnBossIfNeeded();
         }
 
         if (killCount == 5)
@@ -48,20 +52,52 @@ public class ScoreboardManager : MonoBehaviour
         }
     }
 
+    public GameObject SpawnBossIfNeeded()
+    {
+        if (spawnedBoss != null)
+        {
+            return spawnedBoss;
+        }
+
+        if (bossPrefab == null || bossSpawnPoint == null)
+        {
+            return null;
+        }
+
+        spawnedBoss = Instantiate(bossPrefab, bossSpawnPoint.position, bossSpawnPoint.rotation);
+
+        EnemySaveIdentity identity = spawnedBoss.GetComponent<EnemySaveIdentity>();
+        if (identity == null)
+        {
+            identity = spawnedBoss.AddComponent<EnemySaveIdentity>();
+        }
+
+        identity.Configure($"{SceneManager.GetActiveScene().name}:Boss");
+        Debug.Log("<color=red>Р’РќРРњРђРќРР•: Р‘РћРЎРЎ РџРћРЇР’РР›РЎРЇ!</color>");
+        return spawnedBoss;
+    }
+
+    public void RestoreState(int restoredKills, bool restoreBoss)
+    {
+        killCount = restoredKills;
+        UpdateUI();
+
+        if (restoreBoss)
+        {
+            SpawnBossIfNeeded();
+        }
+        else if (spawnedBoss != null)
+        {
+            Destroy(spawnedBoss);
+            spawnedBoss = null;
+        }
+    }
+
     private void UpdateUI()
     {
         if (scoreText != null)
         {
-            scoreText.text = "ПОБЕЖДЕНО: " + killCount;
-        }
-    }
-
-    private void SpawnBoss()
-    {
-        if (bossPrefab != null && bossSpawnPoint != null)
-        {
-            Instantiate(bossPrefab, bossSpawnPoint.position, bossSpawnPoint.rotation);
-            Debug.Log("<color=red>ВНИМАНИЕ: БОСС ПОЯВИЛСЯ!</color>");
+            scoreText.text = "РџРћР‘Р•Р–Р”Р•РќРћ: " + killCount;
         }
     }
 
@@ -70,7 +106,7 @@ public class ScoreboardManager : MonoBehaviour
         if (victoryAudio != null)
         {
             victoryAudio.Play();
-            Debug.Log("<color=green>ПОБЕДА! ИГРАЕТ МУЗЫКА!</color>");
+            Debug.Log("<color=green>РџРћР‘Р•Р”Рђ! РР“Р РђР•Рў РњРЈР—Р«РљРђ!</color>");
         }
     }
 }

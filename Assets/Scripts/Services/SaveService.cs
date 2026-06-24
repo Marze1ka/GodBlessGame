@@ -4,19 +4,25 @@ public class SaveService : ISaveService
 {
     public void SaveGame()
     {
-        // Ищем объект именно с тегом Player
         GameObject playerObj = GameObject.FindWithTag("Player");
 
         if (playerObj != null)
         {
-            Health playerHealth = playerObj.GetComponent<Health>();
-            PlayerPrefs.SetFloat("PlayerHP", playerHealth.currentHealth);
-            PlayerPrefs.Save(); // Принудительно записываем на диск
-            Debug.Log("<color=green>ИГРА СОХРАНЕНА!</color> Записано HP: " + playerHealth.currentHealth);
+            PlayerController playerController = playerObj.GetComponent<PlayerController>();
+            if (playerController == null)
+            {
+                Debug.LogError("РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ: РќР° РѕР±СЉРµРєС‚Рµ Player РЅРµС‚ PlayerController!");
+                return;
+            }
+
+            float currentHealth = playerController.GetModel().Health;
+            PlayerPrefs.SetFloat("PlayerHP", currentHealth);
+            PlayerPrefs.Save();
+            Debug.Log("<color=green>РР“Р Рђ РЎРћРҐР РђРќР•РќРђ!</color> Р—Р°РїРёСЃР°РЅРѕ HP: " + currentHealth);
         }
         else
         {
-            Debug.LogError("Ошибка сохранения: Объект с тегом 'Player' не найден!");
+            Debug.LogError("РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ: РћР±СЉРµРєС‚ СЃ С‚РµРіРѕРј 'Player' РЅРµ РЅР°Р№РґРµРЅ!");
         }
     }
 
@@ -26,20 +32,21 @@ public class SaveService : ISaveService
 
         if (playerObj != null && PlayerPrefs.HasKey("PlayerHP"))
         {
-            Health playerHealth = playerObj.GetComponent<Health>();
+            PlayerController playerController = playerObj.GetComponent<PlayerController>();
+            if (playerController == null)
+            {
+                Debug.LogError("РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё: РќР° РѕР±СЉРµРєС‚Рµ Player РЅРµС‚ PlayerController!");
+                return;
+            }
+
             float savedHP = PlayerPrefs.GetFloat("PlayerHP");
+            playerController.SetHealthFromSave(savedHP);
 
-            playerHealth.currentHealth = savedHP;
-
-            // ОБЯЗАТЕЛЬНО обновляем полоску здоровья визуально
-            if (playerHealth.healthSlider != null)
-                playerHealth.healthSlider.value = savedHP;
-
-            Debug.Log("<color=cyan>ЗАГРУЗКА ЗАВЕРШЕНА!</color> Установлено HP: " + savedHP);
+            Debug.Log("<color=cyan>Р—РђР“Р РЈР—РљРђ Р—РђР’Р•Р РЁР•РќРђ!</color> РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ HP: " + savedHP);
         }
         else
         {
-            Debug.LogWarning("Сохранение не найдено или игрок отсутствует.");
+            Debug.LogWarning("РЎРѕС…СЂР°РЅРµРЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ РёР»Рё РёРіСЂРѕРє РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚.");
         }
     }
 }

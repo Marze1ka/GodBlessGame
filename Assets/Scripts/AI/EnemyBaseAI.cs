@@ -1,62 +1,58 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization;
 
 public class EnemyBaseAI : MonoBehaviour
 {
-    [Header("Режим поведения")]
-    public bool isPeaceful = true;
-    public bool isRanged = false;
+    [Header("Behavior")]
+    [FormerlySerializedAs("isPeaceful")] public bool peacefulMode = true;
+    [FormerlySerializedAs("isRanged")] public bool rangedCombat;
 
-    [Header("Настройки ИИ")]
+    [Header("AI Settings")]
     public float detectionRange = 15f;
     public float attackRange = 3f;
     public float rangedStopDistance = 10f;
 
-    [Header("Настройки задержки (Визуал)")]
+    [Header("Visual Delay")]
     public float attackDelay = 0.5f;
 
-    [Header("Ссылки на компоненты")]
+    [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
     public Transform player;
     public Health health;
 
-    [Header("Ссылки на префабы")]
+    [Header("Weapon Data")]
+    public Transform weaponSocket;
+    public EnemyWeaponData currentData;
+
+    [Header("Projectile")]
     public GameObject projectilePrefab;
     public Transform firePoint;
 
     [HideInInspector] public EnemyStateMachine stateMachine;
+    private Coroutine _pendingMeleeRoutine;
+    private Coroutine _pendingRangedRoutine;
 
     protected virtual void Awake()
     {
-        stateMachine = gameObject.AddComponent<EnemyStateMachine>();
-
-        // ПРОВЕРКА: Если ссылка на игрока пустая (а в префабе она всегда пустая)
-        if (player == null)
+        stateMachine = GetComponent<EnemyStateMachine>();
+        if (stateMachine == null)
         {
-            // Ищем на сцене объект с тегом Player
-            GameObject playerObject = GameObject.FindWithTag("Player");
-
-            if (playerObject != null)
-            {
-                player = playerObject.transform;
-            }
-            else
-            {
-                Debug.LogError("ОШИБКА: На сцене не найден объект с тегом Player! Проверь теги.");
-            }
+            stateMachine = gameObject.AddComponent<EnemyStateMachine>();
         }
 
-        // Остальные ссылки (ищем их на самом себе)
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         if (anim == null) anim = GetComponentInChildren<Animator>();
         if (health == null) health = GetComponent<Health>();
+
+        ResolvePlayerReference();
     }
 
     protected virtual void Start()
     {
-        // Все мобы и боссы начинают в Покое
-        stateMachine.Initialize(new IdleState(stateMachine, this));
+        stateMachine.Initialize(CreateInitialState());
     }
 
     private void Update()
@@ -64,67 +60,168 @@ public class EnemyBaseAI : MonoBehaviour
         stateMachine.Update();
     }
 
-    // --- ЛОГИКА 1: БЛИЖНИЙ БОЙ (МЕЧ) ---
+    protected virtual EnemyState CreateInitialState()
+    {
+        return new IdleState(stateMachine, this);
+    }
+
     public void StartMeleeAttackSequence()
     {
-        Invoke("ExecuteMeleeLogic", attackDelay);
+        CancelPendingMeleeAttack();
+        _pendingMeleeRoutine = StartCoroutine(DelayedMeleeRoutine());
     }
 
-    private void ExecuteMeleeLogic()
+    private IEnumerator DelayedMeleeRoutine()
     {
-        float finalDmg = 10f;
-
-        // Если это Босс, берем его уникальный урон
-        if (this is BossAI boss)
-            finalDmg = boss.isUsingStrongMelee ? boss.strongAttackDamage : boss.weakAttackDamage;
-
-        PlayerController pc = player.GetComponent<PlayerController>();
-        if (pc != null)
-        {
-            pc.ApplyDamage(finalDmg);
-            Debug.Log("<color=white>УДАР МЕЧОМ!</color>");
-        }
+        yield return new WaitForSeconds(attackDelay);
+        _pendingMeleeRoutine = null;
+        ExecuteMeleeLogic();
     }
 
-    // --- ЛОГИКА 2: ДАЛЬНИЙ БОЙ (МАГИЯ) ---
+    protected virtual void ExecuteMeleeLogic()
+    {
+        PlayerController playerController = ResolvePlayerController();
+        if (playerController == null)
+        {
+            return;
+        }
+
+        float distanceToPlayer = Vector3.Distance(transform.position, playerController.transform.position);
+        if (distanceToPlayer > GetEffectiveMeleeAttackDistance() + 1f)
+        {
+            return;
+        }
+
+        playerController.ApplyDamage(GetMeleeDamage());
+        Debug.Log("<color=white>ENEMY MELEE HIT</color>");
+    }
+
     public void StartRangedAttackSequence()
     {
-        Invoke("ExecuteRangedLogic", attackDelay);
+        CancelPendingRangedAttack();
+        _pendingRangedRoutine = StartCoroutine(DelayedRangedRoutine());
     }
 
-    private void ExecuteRangedLogic()
+    private IEnumerator DelayedRangedRoutine()
     {
+        yield return new WaitForSeconds(attackDelay);
+        _pendingRangedRoutine = null;
+        ExecuteRangedLogic();
+    }
+
+    protected virtual void ExecuteRangedLogic()
+    {
+        if (!ResolvePlayerReference())
+        {
+            return;
+        }
+
         if (projectilePrefab != null && firePoint != null)
         {
-            // Целимся в грудь игрока
             Vector3 targetCenter = player.position + Vector3.up * 1.5f;
             Vector3 shootDir = (targetCenter - firePoint.position).normalized;
 
             GameObject ball = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(shootDir));
-
-            // Настройка урона для босса
-            if (this is BossAI boss)
-            {
-                EnemyProjectile script = ball.GetComponent<EnemyProjectile>();
-                if (script != null) script.damage = boss.currentMagicDamage;
-            }
-            Debug.Log("<color=cyan>ВЫСТРЕЛ МАГИЕЙ!</color>");
+            ConfigureProjectile(ball);
+            Debug.Log("<color=cyan>ENEMY RANGED HIT</color>");
         }
     }
 
     public virtual void OnHit()
     {
-        if (isPeaceful)
+        if (peacefulMode)
         {
             if (health.currentHealth < health.maxHealth * 0.4f)
+            {
                 stateMachine.ChangeState(new FleeState(stateMachine, this));
+            }
         }
         else
         {
-            if (stateMachine.CurrentState is IdleState)
-                stateMachine.ChangeState(new ChaseState(stateMachine, this));
+            EnterCombatState();
         }
     }
 
-    public void StartFleeing() { stateMachine.ChangeState(new FleeState(stateMachine, this)); }
+    protected virtual void EnterCombatState()
+    {
+        stateMachine.ChangeState(new ChaseState(stateMachine, this));
+    }
+
+    protected virtual float GetMeleeDamage()
+    {
+        return currentData != null ? currentData.damage : 10f;
+    }
+
+    public float GetEffectiveMeleeAttackDistance()
+    {
+        float agentReach = agent != null ? agent.stoppingDistance + agent.radius + 0.75f : 0f;
+        return Mathf.Max(attackRange, agentReach);
+    }
+
+    protected virtual void ConfigureProjectile(GameObject projectileObject)
+    {
+    }
+
+    public void StartFleeing()
+    {
+        stateMachine.ChangeState(new FleeState(stateMachine, this));
+    }
+
+    public void CancelPendingMeleeAttack()
+    {
+        if (_pendingMeleeRoutine != null)
+        {
+            StopCoroutine(_pendingMeleeRoutine);
+            _pendingMeleeRoutine = null;
+        }
+    }
+
+    public void CancelPendingRangedAttack()
+    {
+        if (_pendingRangedRoutine != null)
+        {
+            StopCoroutine(_pendingRangedRoutine);
+            _pendingRangedRoutine = null;
+        }
+    }
+
+    public bool ResolvePlayerReference()
+    {
+        if (player != null)
+        {
+            return true;
+        }
+
+        GameObject playerObject = GameObject.FindWithTag("Player");
+        if (playerObject == null)
+        {
+            PlayerController playerController = Object.FindAnyObjectByType<PlayerController>();
+            if (playerController != null)
+            {
+                playerObject = playerController.gameObject;
+            }
+        }
+
+        if (playerObject == null)
+        {
+            return false;
+        }
+
+        player = playerObject.transform;
+        return true;
+    }
+
+    protected PlayerController ResolvePlayerController()
+    {
+        if (ResolvePlayerReference())
+        {
+            PlayerController playerController = player.GetComponent<PlayerController>();
+            if (playerController != null)
+            {
+                return playerController;
+            }
+        }
+
+        return Object.FindAnyObjectByType<PlayerController>();
+    }
 }
